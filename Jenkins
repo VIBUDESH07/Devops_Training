@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        NODEJS_HOME = tool 'nodejs-23'          // Node.js installation in Jenkins
+        NODEJS_HOME = tool 'nodejs-23'           // Node.js installation in Jenkins
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
-        IMAGE_NAME = "frontend"              // Docker image name
-        CONTAINER_NAME = "frontend"       // Docker container name
+        IMAGE_NAME = "frontend"                  // Docker image name
+        CONTAINER_NAME = "frontend"              // Docker container name
         DOCKER_PASSWORD = "040705"               // Docker password
     }
 
@@ -47,26 +47,22 @@ pipeline {
         }
 
         // 🔥 Stop and Remove Existing Container (if running)
-        stage('Stop and Remove Existing Container') {
+        stage('Recreate or Create Container') {
             steps {
                 script {
                     sh """
-                    if [ \$(sudo docker ps -q -f name=${CONTAINER_NAME}) ]; then
-                        echo "🔴 Stopping container: ${CONTAINER_NAME}"
-                        echo '${DOCKER_PASSWORD}' | sudo -S docker stop ${CONTAINER_NAME}
-
-                        # Wait until the container is fully stopped
-                        echo "⌛ Waiting for container to stop..."
-                        echo '${DOCKER_PASSWORD}' | sudo -S docker wait ${CONTAINER_NAME}
-
-                        # Force remove the container
-                        echo "🗑️ Removing container: ${CONTAINER_NAME}"
-                        echo '${DOCKER_PASSWORD}' | sudo -S docker rm -f ${CONTAINER_NAME}
-
-                        # Clean up dangling containers
-                        echo "🧹 Cleaning up dangling containers..."
-                        echo '${DOCKER_PASSWORD}' | sudo -S docker container prune -f
+                    if sudo docker ps -a -q -f name=${CONTAINER_NAME}; then
+                        echo "🔴 Container ${CONTAINER_NAME} exists. Recreating..."
+                        # Stop and remove the existing container
+                        echo '${DOCKER_PASSWORD}' | sudo -S docker stop ${CONTAINER_NAME} || true
+                        echo '${DOCKER_PASSWORD}' | sudo -S docker rm -f ${CONTAINER_NAME} || true
+                    else
+                        echo "🟢 Container ${CONTAINER_NAME} does not exist. Creating a new one..."
                     fi
+
+                    # Clean up dangling containers
+                    echo "🧹 Cleaning up dangling containers..."
+                    echo '${DOCKER_PASSWORD}' | sudo -S docker container prune -f
                     """
                 }
             }
@@ -77,6 +73,7 @@ pipeline {
             steps {
                 script {
                     sh """
+                    echo "🚀 Starting container ${CONTAINER_NAME}..."
                     echo '${DOCKER_PASSWORD}' | sudo -S docker run -d -p 3001:80 --name ${CONTAINER_NAME} ${IMAGE_NAME}
                     """
                 }

@@ -10,47 +10,46 @@ pipeline {
     }
 
     stages {
-        // 🛠️ Checkout the repository (only `Devops` folder)
+
+        // 🛠️ Clone the Entire Repository
         stage('Checkout') {
             steps {
                 script {
-                    // Clone only the Devops folder using sparse-checkout
                     sh """
-                    rm -rf Devops_Training  # Remove existing folder if exists
-                    git clone --filter=blob:none --no-checkout https://github.com/VIBUDESH07/Devops_Training.git
-                    cd Devops_Training
-                    git sparse-checkout init --cone
-                    git sparse-checkout set Devops
-                    git checkout
+                    # Remove existing folder if exists
+                    rm -rf Devops_Training
+
+                    # Clone the entire repository
+                    git clone https://github.com/VIBUDESH07/Devops_Training.git
                     """
                 }
             }
         }
 
-        // 📦 Install dependencies
+        // 📦 Install Dependencies (Only from `Devops` folder)
         stage('Install Dependencies') {
             steps {
-                dir('Devops_Training/Devops') {  // Navigate into the cloned folder
+                dir('Devops_Training/Devops') {   // Navigate into the `Devops` folder
                     sh 'npm install'
                 }
             }
         }
 
-        // 🔨 Build the React app
+        // 🔨 Build the Vite App (Only from `Devops` folder)
         stage('Build') {
             steps {
-                dir('Devops_Training/Devops') {
+                dir('Devops_Training/Devops') {   // Navigate into the `Devops` folder
                     sh 'npm run build'
                 }
             }
         }
 
-        // 🐳 Build Docker Image
+        // 🐳 Build Docker Image (Only from `Devops` folder)
         stage('Build Docker Image') {
             steps {
                 script {
                     sh """
-                    cd Devops_Training/Devops
+                    cd Devops_Training/Devops    # Navigate into the `Devops` folder
                     echo '${DOCKER_PASSWORD}' | sudo -S docker build -t ${IMAGE_NAME} .
                     """
                 }

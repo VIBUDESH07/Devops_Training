@@ -4,36 +4,44 @@ pipeline {
     environment {
         NODEJS_HOME = tool 'nodejs-23'           // Node.js installation in Jenkins
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
-        IMAGE_NAME = "signup"                  // Docker image name
-        CONTAINER_NAME = "signup"              // Docker container name
+        IMAGE_NAME = "signup"                    // Docker image name
+        CONTAINER_NAME = "signup"                // Docker container name
         DOCKER_PASSWORD = "040705"               // Docker password
     }
 
     stages {
-        // 🛠️ Checkout the repository
+        // 🛠️ Checkout the repository (only `Devops` folder)
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [[$class: 'CloneOption', depth: 1, noTags: true]],
-                    submoduleCfg: [],
-                    userRemoteConfigs: [[url: 'https://github.com/VIBUDESH07/SIH12.git']]
-                ])
+                script {
+                    // Clone only the Devops folder using sparse-checkout
+                    sh """
+                    rm -rf Devops_Training  # Remove existing folder if exists
+                    git clone --filter=blob:none --no-checkout https://github.com/VIBUDESH07/Devops_Training.git
+                    cd Devops_Training
+                    git sparse-checkout init --cone
+                    git sparse-checkout set Devops
+                    git checkout
+                    """
+                }
             }
         }
 
         // 📦 Install dependencies
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                dir('Devops_Training/Devops') {  // Navigate into the cloned folder
+                    sh 'npm install'
+                }
             }
         }
 
         // 🔨 Build the React app
         stage('Build') {
             steps {
-                sh 'npm run build'
+                dir('Devops_Training/Devops') {
+                    sh 'npm run build'
+                }
             }
         }
 
@@ -41,7 +49,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "echo '${DOCKER_PASSWORD}' | sudo -S docker build -t ${IMAGE_NAME} ."
+                    sh """
+                    cd Devops_Training/Devops
+                    echo '${DOCKER_PASSWORD}' | sudo -S docker build -t ${IMAGE_NAME} .
+                    """
                 }
             }
         }

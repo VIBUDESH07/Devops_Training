@@ -77,7 +77,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    echo '${DOCKER_PASSWORD}' | sudo -S docker run -d -p 3000:80 --name ${CONTAINER_NAME} ${IMAGE_NAME}
+                    echo '${DOCKER_PASSWORD}' | sudo -S docker run -d -p 3001:80 --name ${CONTAINER_NAME} ${IMAGE_NAME}
                     """
                 }
             }

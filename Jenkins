@@ -7,6 +7,7 @@ pipeline {
         IMAGE_NAME = "signup"                    // Docker image name
         CONTAINER_NAME = "signup"                // Docker container name
         DOCKER_PASSWORD = "040705"               // Docker password
+        TERRAFORM_VERSION = "1.3.5"              // Version of Terraform you want to use
     }
 
     stages {
@@ -102,6 +103,48 @@ pipeline {
                         exit 1
                     fi
                     """
+                }
+            }
+        }
+
+        // 🌍 Initialize Terraform (Add Terraform Stage)
+        stage('Terraform Init') {
+            steps {
+                script {
+                    dir('Devops_Training/terraform') {  // Navigate to the Terraform directory
+                        sh '''
+                        # Initialize Terraform
+                        terraform init
+                        '''
+                    }
+                }
+            }
+        }
+
+        // 📑 Plan Terraform Deployment (Add Terraform Stage)
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    dir('Devops_Training/terraform') {  // Navigate to the Terraform directory
+                        sh '''
+                        # Run Terraform Plan to preview the changes
+                        terraform plan -out=tfplan
+                        '''
+                    }
+                }
+            }
+        }
+
+        // ✅ Apply Terraform Changes (Add Terraform Stage)
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    dir('Devops_Training/terraform') {  // Navigate to the Terraform directory
+                        sh '''
+                        # Apply the Terraform plan to provision resources
+                        terraform apply -auto-approve tfplan
+                        '''
+                    }
                 }
             }
         }

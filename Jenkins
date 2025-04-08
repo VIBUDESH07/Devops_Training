@@ -2,147 +2,66 @@ pipeline {
     agent any
 
     environment {
-        NODEJS_HOME = tool 'nodejs-23'           // Node.js installation in Jenkins
+        NODEJS_HOME = tool 'nodejs-23'   // Node.js installation in Jenkins
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
-        IMAGE_NAME = "signup"                    // Docker image name
-        CONTAINER_NAME = "signup"                // Docker container name
-        DOCKER_PASSWORD = "040705"               // Docker password
-        TERRAFORM_VERSION = "1.3.5"              // Version of Terraform you want to use
+        IMAGE_NAME = "signup"            // Docker image name
+        CONTAINER_NAME = "signup"        // Docker container name
+        TERRAFORM_VERSION = "1.3.5"
+        AWS_REGION = "us-east-1"
+        ECR_REPO = "307946674949.dkr.ecr.us-east-1.amazonaws.com/signup-repo"
     }
 
     stages {
-
-        // 🛠️ Clone the Entire Repository
         stage('Checkout') {
             steps {
                 script {
                     sh """
-                    # Remove existing folder if exists
                     rm -rf Devops_Training
-
-                    # Clone the entire repository
                     git clone https://github.com/VIBUDESH07/Devops_Training.git
                     """
                 }
             }
         }
 
-        // 📦 Install Dependencies (Only from `Devops` folder)
         stage('Install Dependencies') {
             steps {
-                dir('Devops_Training/Devops') {   // Navigate into the `Devops` folder
+                dir('Devops_Training/Devops') {
                     sh 'npm install'
                 }
             }
         }
 
-        // 🔨 Build the Vite App (Only from `Devops` folder)
         stage('Build') {
             steps {
-                dir('Devops_Training/Devops') {   // Navigate into the `Devops` folder
+                dir('Devops_Training/Devops') {
                     sh 'npm run build'
                 }
             }
         }
 
-        // 🐳 Build Docker Image (Only from `Devops` folder)
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image to ECR') {
             steps {
-                script {
-                    sh """
-                    cd Devops_Training/Devops    # Navigate into the `Devops` folder
-                    echo '${DOCKER_PASSWORD}' | sudo -S docker build -t ${IMAGE_NAME} .
-                    """
+                withCredentials([string(credentialsId: 'DOCKER_PASS', variable: 'DOCKER_PASSWORD')]) {
+                    script {
+                        sh """
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+                        cd Devops_Training/Devops
+                        docker build -t ${IMAGE_NAME} .
+                        docker tag ${IMAGE_NAME}:latest ${ECR_REPO}:latest
+                        docker push ${ECR_REPO}:latest
+                        """
+                    }
                 }
             }
         }
 
-        // 🔥 Stop and Remove Existing Container (if running)
-        stage('Recreate or Create Container') {
+        stage('Deploy Container to ECS') {
             steps {
                 script {
-                    sh """
-                    if sudo docker ps -a -q -f name=${CONTAINER_NAME}; then
-                        echo "🔴 Container ${CONTAINER_NAME} exists. Recreating..."
-                        # Stop and remove the existing container
-                        echo '${DOCKER_PASSWORD}' | sudo -S docker stop ${CONTAINER_NAME} || true
-                        echo '${DOCKER_PASSWORD}' | sudo -S docker rm -f ${CONTAINER_NAME} || true
-                    else
-                        echo "🟢 Container ${CONTAINER_NAME} does not exist. Creating a new one..."
-                    fi
-
-                    # Clean up dangling containers
-                    echo "🧹 Cleaning up dangling containers..."
-                    echo '${DOCKER_PASSWORD}' | sudo -S docker container prune -f
-                    """
-                }
-            }
-        }
-
-        // 🚀 Run the Docker Container
-        stage('Run Docker Container') {
-            steps {
-                script {
-                    sh """
-                    echo "🚀 Starting container ${CONTAINER_NAME}..."
-                    echo '${DOCKER_PASSWORD}' | sudo -S docker run -d -p 5000:80 --name ${CONTAINER_NAME} ${IMAGE_NAME}
-                    """
-                }
-            }
-        }
-
-        // ✅ Verify the Container is Running
-        stage('Verify Container Running') {
-            steps {
-                script {
-                    sh """
-                    if sudo docker ps | grep -q ${CONTAINER_NAME}; then
-                        echo "✅ Container ${CONTAINER_NAME} is running successfully."
-                    else
-                        echo "❌ Failed to start container."
-                        exit 1
-                    fi
-                    """
-                }
-            }
-        }
-
-        // 🌍 Initialize Terraform (Add Terraform Stage)
-        stage('Terraform Init') {
-            steps {
-                script {
-                    dir('Devops_Training/terraform') {  // Navigate to the Terraform directory
+                    dir('Devops_Training/terraform') {
                         sh '''
-                        # Initialize Terraform
                         terraform init
-                        '''
-                    }
-                }
-            }
-        }
-
-        // 📑 Plan Terraform Deployment (Add Terraform Stage)
-        stage('Terraform Plan') {
-            steps {
-                script {
-                    dir('Devops_Training/terraform') {  // Navigate to the Terraform directory
-                        sh '''
-                        # Run Terraform Plan to preview the changes
-                        terraform plan -out=tfplan
-                        '''
-                    }
-                }
-            }
-        }
-
-        // ✅ Apply Terraform Changes (Add Terraform Stage)
-        stage('Terraform Apply') {
-            steps {
-                script {
-                    dir('Devops_Training/terraform') {  // Navigate to the Terraform directory
-                        sh '''
-                        # Apply the Terraform plan to provision resources
-                        terraform apply -auto-approve tfplan
+                        terraform apply -auto-approve
                         '''
                     }
                 }

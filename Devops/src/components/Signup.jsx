@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const SignUp = () => {
@@ -9,44 +9,13 @@ const SignUp = () => {
     password: "",
     confirmPassword: "",
   });
-
-  const [passwordError, setPasswordError] = useState("");
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
-
-  const validatePassword = (password) => {
-    const regex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
-
-    if (!regex.test(password)) {
-      setPasswordError(
-        "Password must be at least 8 characters, include an uppercase, lowercase, number, and special character."
-      );
-      setIsPasswordValid(false);
-    } else {
-      setPasswordError("");
-      setIsPasswordValid(true);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-
-    if (name === "password") {
-      validatePassword(value);
-    }
-  };
+  const [errorMessage, setErrorMessage] = useState(""); // State for error messages
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!isPasswordValid) {
-      alert("Please enter a valid password!");
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+      setErrorMessage("Passwords do not match!"); // Set error message
       return;
     }
 
@@ -57,10 +26,11 @@ const SignUp = () => {
     });
 
     if (res.ok) {
+      setErrorMessage(""); // Clear error message
       alert("Sign Up Successful!");
-      navigate("/login");
+      navigate("/");
     } else {
-      alert("Failed to Sign Up!");
+      setErrorMessage("Failed to sign up!"); // Set error message
     }
   };
 
@@ -70,6 +40,7 @@ const SignUp = () => {
         <h2 className="text-3xl font-bold text-white mb-6 text-center">Create Account</h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {errorMessage && <p className="text-red-500 text-sm">{errorMessage}</p>} {/* Display error message */}
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-white">
               Username
@@ -80,7 +51,7 @@ const SignUp = () => {
               name="username"
               placeholder="Enter your username"
               value={formData.username}
-              onChange={handleChange}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               required
               className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-gray-300 border border-gray-300 focus:ring-4 focus:ring-blue-400 focus:outline-none transition"
             />
@@ -96,7 +67,7 @@ const SignUp = () => {
               name="email"
               placeholder="Enter your email"
               value={formData.email}
-              onChange={handleChange}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
               className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-gray-300 border border-gray-300 focus:ring-4 focus:ring-blue-400 focus:outline-none transition"
             />
@@ -112,15 +83,10 @@ const SignUp = () => {
               name="password"
               placeholder="Enter your password"
               value={formData.password}
-              onChange={handleChange}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
-              className={`w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-gray-300 border ${
-                passwordError ? "border-red-500" : "border-green-500"
-              } focus:ring-4 focus:ring-blue-400 focus:outline-none transition`}
+              className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-gray-300 border border-gray-300 focus:ring-4 focus:ring-blue-400 focus:outline-none transition"
             />
-            {passwordError && (
-              <p className="text-red-400 text-sm mt-2">{passwordError}</p>
-            )}
           </div>
 
           <div>
@@ -133,7 +99,7 @@ const SignUp = () => {
               name="confirmPassword"
               placeholder="Confirm your password"
               value={formData.confirmPassword}
-              onChange={handleChange}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               required
               className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-gray-300 border border-gray-300 focus:ring-4 focus:ring-blue-400 focus:outline-none transition"
             />
@@ -141,12 +107,7 @@ const SignUp = () => {
 
           <button
             type="submit"
-            disabled={!isPasswordValid}
-            className={`w-full text-white py-3 rounded-lg transition duration-300 shadow-lg ${
-              isPasswordValid
-                ? "bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/50"
-                : "bg-gray-400 cursor-not-allowed"
-            }`}
+            className="w-full text-white py-3 rounded-lg transition duration-300 shadow-lg bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/50"
           >
             Sign Up
           </button>
@@ -154,7 +115,7 @@ const SignUp = () => {
 
         <p className="text-center mt-6 text-gray-300">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-300 hover:underline">
+          <a href="/" className="text-blue-300 hover:underline">
             Log in
           </a>
         </p>

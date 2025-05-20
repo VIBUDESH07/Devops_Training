@@ -1,33 +1,18 @@
-# Stage 1: Build the Vite app
-FROM node:18 AS build
+# Use an official Node.js runtime as the base image
+FROM node:18
 
-# Set working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the package files and install dependencies
-COPY package.json package-lock.json ./
-RUN npm install
+# Copy package.json and package-lock.json to the working directory
+COPY package*.json ./
 
-# Copy all project files
+# Install dependencies, including Babel and Jest
+RUN npm install && \
+    npm install --save-dev @babel/core @babel/preset-env @babel/preset-react babel-jest
+
+# Copy the rest of the application code to the working directory
 COPY . .
 
-# Build the Vite app
-RUN npm run build
-
-# Stage 2: Serve the built app with NGINX
-FROM nginx:1.23 AS production
-
-# Set NGINX working directory
-WORKDIR /usr/share/nginx/html
-
-# Remove default NGINX static content
-RUN rm -rf ./*
-
-# Copy Vite build output to NGINX's default folder
-COPY --from=build /app/dist .
-
-# Expose port 80
-EXPOSE 80
-
-# Start NGINX
-CMD ["nginx", "-g", "daemon off;"]
+# Run tests
+CMD ["npx", "jest"]
